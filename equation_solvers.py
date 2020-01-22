@@ -66,26 +66,26 @@ def gauss_seidel_update_x_sparse(compact_matrix, x, b):
                     temp -= value * x[column_index]
         
         x[i] = temp / diag_el
-    # print(f"x: {x}")
         
     return x
 
 def gauss_seidel_update_x_sparse_optimized(compact_matrix, x, b):
     n = len(x)
-    m = compact_matrix.shape[1]
-    temp = np.zeros(n)
-    for j in range(m):
+    k = compact_matrix.shape[1]
+    temp = 0
+    for j in range(k):
         row_index = int(compact_matrix[0, j])
         column_index = int(compact_matrix[1, j])
         value = compact_matrix[2, j]
         if row_index == column_index:
-            temp[row_index] += b[row_index]
+            temp += b[row_index]
             diag_el = value
         else:
-            temp[row_index] -= value * x[column_index]
+            temp -= value * x[column_index]
             
-        if (j == m-1) or (int(compact_matrix[0, j+1]) > row_index):
-            x[row_index] = temp[row_index]/diag_el        
+        if (j == k-1) or (int(compact_matrix[0, j+1]) > row_index):
+            x[row_index] = temp/diag_el
+            temp = 0        
     return x
 
 def gauss_seidel(A, b, x=None, stop_criterion=1e-6, nb_iteration=20, check_criterion=False):
@@ -126,6 +126,7 @@ def gauss_seidel_effective(A, b, x=None, n=20):
 def gauss_seidel_sparse(A_sparse, b, x=None, nb_iteration=20, stop_criterion=1e-6, check_criterion=False, optimized=False):
     test_convergence_gauss_seidel(A_sparse)
     compact_matrix = get_compact_matrix(A_sparse)
+    # print(compact_matrix)
     start_gauss_seidel = timer()
     if x is None:
         x = np.zeros(len(b), dtype=np.float32)
@@ -262,7 +263,9 @@ if __name__ == "__main__":
     #             [62, 31, -4, 5, 2, 0]], dtype=np.float32)
     # b = np.array([55, 47, 22, 3, 4, 8], dtype=np.float32)
     
-    a = np.array([[4, 1, 2],[3, 5, 1],[1, 1, 3]], dtype=np.float32) 
+    a = np.array([[4, 1, 2],
+                  [3, 5, 1],
+                  [1, 1, 3]], dtype=np.float32) 
     b = np.array([4,7,3], dtype=np.float32) 
     # a_sparse = np.array([[0, 1, 0],[3, 2, 0],[0, 3, 2]], dtype=np.float32) 
     # a = a_sparse
