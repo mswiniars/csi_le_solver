@@ -66,9 +66,27 @@ def gauss_seidel_update_x_sparse(compact_matrix, x, b):
                     temp -= value * x[column_index]
         
         x[i] = temp / diag_el
+    # print(f"x: {x}")
         
     return x
 
+def gauss_seidel_update_x_sparse_optimized(compact_matrix, x, b):
+    n = len(x)
+    m = compact_matrix.shape[1]
+    temp = np.zeros(n)
+    for j in range(m):
+        row_index = int(compact_matrix[0, j])
+        column_index = int(compact_matrix[1, j])
+        value = compact_matrix[2, j]
+        if row_index == column_index:
+            temp[row_index] += b[row_index]
+            diag_el = value
+        else:
+            temp[row_index] -= value * x[column_index]
+            
+        if (j == m-1) or (int(compact_matrix[0, j+1]) > row_index):
+            x[row_index] = temp[row_index]/diag_el        
+    return x
 
 def gauss_seidel(A, b, x=None, stop_criterion=1e-6, nb_iteration=20, check_criterion=False):
     test_convergence_gauss_seidel(A)
@@ -105,7 +123,7 @@ def gauss_seidel_effective(A, b, x=None, n=20):
     return x
 
 
-def gauss_seidel_sparse(A_sparse, b, x=None, nb_iteration=20, stop_criterion=1e-6, check_criterion=False):
+def gauss_seidel_sparse(A_sparse, b, x=None, nb_iteration=20, stop_criterion=1e-6, check_criterion=False, optimized=False):
     test_convergence_gauss_seidel(A_sparse)
     compact_matrix = get_compact_matrix(A_sparse)
     start_gauss_seidel = timer()
@@ -113,8 +131,11 @@ def gauss_seidel_sparse(A_sparse, b, x=None, nb_iteration=20, stop_criterion=1e-
         x = np.zeros(len(b), dtype=np.float32)
         
     for i in range(nb_iteration):
-        x_old = np.copy(x) 
-        gauss_seidel_update_x_sparse(compact_matrix, x, b)
+        x_old = np.copy(x)
+        if optimized:
+            gauss_seidel_update_x_sparse_optimized(compact_matrix, x, b)
+        else: 
+            gauss_seidel_update_x_sparse(compact_matrix, x, b)
         if check_criterion:
             if x.all() != 0:
                 update_score = np.abs((x - x_old)/x)
@@ -122,7 +143,7 @@ def gauss_seidel_sparse(A_sparse, b, x=None, nb_iteration=20, stop_criterion=1e-
                     break
         
     stop_gauss_seidel = timer()
-    print(f"(IS) Gauss-Seidel Sparse: number of iteration: {i+1} to converge in {stop_criterion} update, time consumption: {stop_gauss_seidel - start_gauss_seidel}")
+    print(f"(IS) Gauss-Seidel Sparse: optimized: {optimized} number of iteration: {i+1} to converge in {stop_criterion} update, time consumption: {stop_gauss_seidel - start_gauss_seidel}")
     
     return x
 
@@ -216,8 +237,8 @@ def test_compact_matrix(sparse_matrix):
     print(compact_matrix)
 
 
-def test_sparse_GS(a, b, numpy_solution, stop_criterion=1e-6, nb_iter=20):
-    solution = gauss_seidel_sparse(a, b, stop_criterion=stop_criterion, nb_iteration=nb_iter)
+def test_sparse_GS(a, b, numpy_solution, stop_criterion=1e-6, nb_iter=20, optimized=True):
+    solution = gauss_seidel_sparse(a, b, stop_criterion=stop_criterion, nb_iteration=nb_iter, optimized=optimized)
     print(f"Sparse Gauss-Seidel solution : {solution}")
     avg_err = np.mean(np.abs(numpy_solution - solution))
     print(f"Average error between numpy and Sparse Gauss-Seidel: {avg_err}")
@@ -250,5 +271,6 @@ if __name__ == "__main__":
     print(f"Numpy linalg solution: {numpy_solution}")
     test_partial_pivoting(a, b, numpy_solution)
     test_gauss_seidel(a, b, numpy_solution, nb_iter=25)
+    test_sparse_GS(a, b, numpy_solution, nb_iter=25, stop_criterion=1e-6, optimized=False)
     test_sparse_GS(a, b, numpy_solution, nb_iter=25, stop_criterion=1e-6)
     test_sparse_scipy(a, b, numpy_solution)

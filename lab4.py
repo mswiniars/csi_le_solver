@@ -18,7 +18,7 @@ def extract_data_from_txt(file_path, nb_points=-1):
     return x, y
 
 
-def spline_interpolation(x, y, mode="numpy"):
+def spline_interpolation(x, y, mode="numpy", optimized_gauss_seidel=True):
     if mode == "numpy":
         linear_solve_eq = np.linalg.solve
     elif mode == "PG":
@@ -48,7 +48,10 @@ def spline_interpolation(x, y, mode="numpy"):
     M = np.transpose(M)
     a = np.zeros(n-1)
     b = np.zeros(n-1)
-    c = linear_solve_eq(A, M)
+    if mode == "IS" and optimized_gauss_seidel:
+        c = linear_solve_eq(A, M, optimized=True)
+    else:
+        c = linear_solve_eq(A, M)
     d = np.zeros(n-1)
 
     for i in range(n-1):
@@ -107,8 +110,11 @@ def main():
     x_spline_it, y_spline_it = spline_interpolation(x, y, mode="IT")
     calc_interpolation_err(x_spline_it, y_spline_it, x_test, y_test)
 
-    x_spline_is, y_spline_is = spline_interpolation(x, y, mode="IS")
+    x_spline_is, y_spline_is = spline_interpolation(x, y, mode="IS", optimized_gauss_seidel=False)
     calc_interpolation_err(x_spline_is, y_spline_is, x_test, y_test)
+    
+    x_spline_is_opt, y_spline_is_opt = spline_interpolation(x, y, mode="IS", optimized_gauss_seidel=True)
+    calc_interpolation_err(x_spline_is_opt, y_spline_is_opt, x_test, y_test)
 
     x_spline_lu, y_spline_lu = spline_interpolation(x, y, mode="ScipyLU")
     calc_interpolation_err(x_spline_lu, y_spline_lu, x_test, y_test)
@@ -122,6 +128,7 @@ def main():
     plt.plot(x_spline_gs, y_spline_gs, label='GS')
     plt.plot(x_spline_it, y_spline_it, label='IT')
     plt.plot(x_spline_is, y_spline_is, label='IS')
+    plt.plot(x_spline_is_opt, y_spline_is_opt, label='IS optimized')
     plt.plot(x_spline_lu, y_spline_lu, label="Sparse LU")
     plt.plot(x_spline_sparse_it, y_spline_sparse_it, label="Sparse Iterative")
     plt.legend()
